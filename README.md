@@ -1,25 +1,10 @@
 ### 注意事项
 
-1. 此脚本仅测试过安装流程，未同BAP服务进行联调，可能需要进行适配
+1. 关闭防火墙和Selinux
 
-2. 执行安装脚本的用户需要有sudo免密权限，并能ssh免密登录其他主机
+2. Hive的元数据存储在PG数据库
 
-3. 关闭防火墙和Selinux
-
-4. 安装通过Ansible进行，可通过BAP的安装脚本提前安装
-
-   ```
-   [root@bap-1 data]# cd bap-install
-   [root@bap-1 bap-install]# bin/00_init.sh
-   ```
-
-5. Hive的元数据存储在PG数据库，可通过BAP的安装脚本提前安装PG数据库(可不执行01、02、03脚本)
-
-   ```
-   [root@bap-1 bap-install]# bin/04_pg.sh
-   ```
-
-6. 安装的大数据平台启用了Kerberos认证，提供bap用户进行认证，密码admin，keytab文件/etc/security/keytabs/bap.keytab
+3. 安装的大数据平台启用了Kerberos认证，提供bap用户进行认证，密码admin，keytab文件/etc/security/keytabs/bap.keytab
 
 
 
@@ -37,7 +22,7 @@
 
 2. 安装Jdk
 
-   Jdk版本为openjdk1.8，安装路径位于/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.322.b06-1.el7_9.x86_64
+   Jdk版本为openjdk1.8
 
    ```
    [root@bap-1 hadoop-install]# bin/01_jdk.sh
@@ -109,7 +94,7 @@
 
 6. 安装Hive
 
-   Hive版本为2.3.8，安装路径可自行配置
+   Hive版本为3.1.0，安装路径可自行配置
 
    ```
    [root@bap-1 hadoop-install]# bin/05_hive.sh
