@@ -1,0 +1,7 @@
+#hive_install_dir: "/opt"
+#hiveserver2_proxy_user: "root"
+#pg_server: "hadoop201"
+#pg_user: "postgres"
+#pg_password: "Zetyun_2021"
+#tmp_dir: "/tmp"
+#spark_home: "/opt/spark"

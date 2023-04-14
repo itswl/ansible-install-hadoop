@@ -1,0 +1,49 @@
+- name:  Check {{ jdk_install_dir }} exists
+  stat:
+    path: "{{ jdk_install_dir }}"
+  register: file_status
+
+# 防止目录不存在导致 JDK 解压失败
+- name: Creates  {{ jdk_install_dir }}
+  file:
+    path: "{{ jdk_install_dir }}"  
+    state: directory
+  when: file_status.stat.exists == False
+
+- name:  Check {{ jdk_install_dir }}/{{ java_dir_name }} exists
+  stat:
+    path: "{{ jdk_install_dir }}/{{ java_dir_name }}"
+  register: bin_file_status
+
+- name: Unzip Package To {{ jdk_install_dir }}/
+  unarchive: src={{ playbook_dir }}/../../{{ java_package_name }}  dest={{ jdk_install_dir }}/
+  when: bin_file_status.stat.exists == False
+
+## 上面任务比较耗时，存在时则跳过
+- name: Create Links {{ jdk_install_dir }}/current
+  file: src={{ jdk_install_dir }}/{{ java_dir_name }} dest={{ jdk_install_dir }}/current state=link
+
+# 防止多次运行重复写入文件
+- name: Delete /etc/profile.d/ansible_java.sh
+  file: 
+    path: /etc/profile.d/ansible_java.sh    
+    state: absent
+
+- name: Generate /etc/profile.d/ansible_java.sh
+  file:
+    path: /etc/profile.d/ansible_java.sh    
+    mode: 0644      
+    state: touch
+  ignore_errors: true 
+
+- name: Add JAVA_HOME To /etc/profile.d/ansible_java.sh
+  shell: /bin/echo export {{ item }} >> /etc/profile.d/ansible_java.sh   
+  with_items:
+      - JAVA_HOME={{ jdk_install_dir }}/current
+      - CLASSPATH=.:\$JAVA_HOME/lib/dt.jar:\$JAVA_HOME/lib/tools.jar
+      - PATH=\$JAVA_HOME/bin:\$PATH
+
+- name: Take Effect
+  shell: source /etc/profile
+  args:
+    executable: /bin/bash

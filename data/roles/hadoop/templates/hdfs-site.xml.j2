@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<!--
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License. See accompanying LICENSE file.
+-->
+
+<!-- Put site-specific property overrides in this file. -->
+
+<configuration>
+    <property>
+        <name>dfs.qjournal.write-txns.timeout.ms</name>
+        <value>60000</value>   
+    </property>
+
+    <property>
+        <name>dfs.namenode.name.dir</name>
+        <value>file://${hadoop.tmp.dir}/hdfs/name1,file://${hadoop.tmp.dir}/hdfs/name2</value>
+    </property>
+
+    <property>
+        <name>dfs.datanode.data.dir</name>
+        <value>{% for dir in hadoop_datanode_data_dir -%}
+            file://{{ dir }}/hdfs/data{% if not loop.last %},{% endif %}
+        {%- endfor %}</value>
+    </property>
+
+    <property>
+        <name>dfs.journalnode.edits.dir</name>
+        <value>${hadoop.tmp.dir}/hdfs/jn</value>
+    </property>
+
+    <property>
+        <name>dfs.nameservices</name>
+        <value>zetyun-hdfs</value>
+    </property>
+
+    <property>
+        <name>dfs.ha.namenodes.zetyun-hdfs</name>
+        <value>{% for host in nn_server -%}
+            nn{{ loop.index }}{% if not loop.last %},{% endif %}
+        {%- endfor %}</value>
+    </property>
+
+{% for host in nn_server %}
+    <property>
+        <name>dfs.namenode.rpc-address.zetyun-hdfs.nn{{ loop.index }}</name>
+        <value>{{ host }}:8020</value>
+    </property>
+
+    <property>
+        <name>dfs.namenode.http-address.zetyun-hdfs.nn{{ loop.index }}</name>
+        <value>{{ host }}:9870</value>
+    </property>
+{% if not loop.last %}
+
+{% endif %}
+{% endfor %}
+
+    <property>
+        <name>dfs.namenode.shared.edits.dir</name>
+        <value>qjournal://{% for host in nn_server -%}
+            {{ host }}:8485{% if not loop.last %};{% endif %}
+        {%- endfor %}/zetyun-hdfs</value>
+    </property>
+
+    <property>
+        <name>dfs.client.failover.proxy.provider.zetyun-hdfs</name>
+        <value>org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider</value>
+    </property>
+
+    <property>
+        <name>dfs.ha.fencing.methods</name>
+        <value>sshfence</value>
+    </property>
+
+    <property>
+        <name>dfs.ha.fencing.ssh.private-key-files</name>
+        <value>{% if hadoop_super_user == "root" -%}
+            /root
+        {%- else -%}
+            /home/{{ hadoop_super_user }}
+        {%- endif %}/.ssh/id_rsa</value>
+    </property>
+
+    <property>
+    	<name>dfs.ha.automatic-failover.enabled</name>
+    	<value>true</value>
+    </property>
+
+    <property>
+    	<name>dfs.block.access.token.enable</name>
+    	<value>true</value>
+    </property>
+
+    <property>
+    	<name>dfs.datanode.data.dir.perm</name>
+    	<value>750</value>
+    </property>
+
+    <property>
+        <name>dfs.data.transfer.protection</name>
+        <value>authentication</value>
+    </property>
+
+{% for host in nn_server %}
+    <property>
+        <name>dfs.namenode.https-address.zetyun-hdfs.nn{{ loop.index }}</name>
+        <value>{{ host }}:9871</value>
+    </property>
+{% if not loop.last %}
+
+{% endif %}
+{% endfor %}
+
+{% if kerberos_auth %}
+    <property>
+    	<name>dfs.namenode.kerberos.principal</name>
+    	<value>nn/_HOST@ZETYUN.COM</value>
+    </property>
+
+    <property>
+    	<name>dfs.namenode.keytab.file</name>
+    	<value>/etc/security/keytabs/nn.service.keytab</value>
+    </property>
+
+    <property>
+    	<name>dfs.namenode.kerberos.internal.spnego.principal</name>
+    	<value>HTTP/_HOST@ZETYUN.COM</value>
+    </property>
+
+    <property>
+    	<name>dfs.web.authentication.kerberos.keytab</name>
+    	<value>/etc/security/keytabs/spnego.service.keytab</value>
+    </property>
+
+    <property>
+    	<name>dfs.http.policy</name>
+    	<value>HTTPS_ONLY</value>
+    </property>
+
+    <property>
+    	<name>dfs.journalnode.https-address</name>
+    	<value>0.0.0.0:8481</value>
+    </property>
+
+    <property>
+        <name>dfs.datanode.https.address</name>
+        <value>0.0.0.0:9865</value>
+    </property>
+
+    <property>
+        <name>dfs.journalnode.kerberos.principal</name>
+        <value>jn/_HOST@ZETYUN.COM</value>
+    </property>
+
+    <property>
+        <name>dfs.journalnode.keytab.file</name>
+        <value>/etc/security/keytabs/jn.service.keytab</value>
+    </property>
+
+    <property>
+    	<name>dfs.journalnode.kerberos.internal.spnego.principal</name>
+    	<value>HTTP/_HOST@ZETYUN.COM</value>
+    </property>
+
+    <property>
+    	<name>dfs.web.authentication.kerberos.principal</name>
+    	<value>HTTP/_HOST@ZETYUN.COM</value>
+    </property>
+
+    <!--property>
+        <name>dfs.datanode.ipc.address</name>
+        <value>0.0.0.0:8010</value>
+    </property!-->
+
+    <property>
+    	<name>dfs.datanode.kerberos.principal</name>
+    	<value>dn/_HOST@ZETYUN.COM</value>
+    </property>
+
+    <property>
+    	<name>dfs.datanode.keytab.file</name>
+    	<value>/etc/security/keytabs/dn.service.keytab</value>
+    </property>
+{% endif %}
+
+</configuration>

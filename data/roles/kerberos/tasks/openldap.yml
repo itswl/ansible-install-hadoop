@@ -1,0 +1,111 @@
+- name: Step 1 - Unarchive openldap installation package
+  unarchive: src=ldap.tar.gz dest={{ tmp_dir }}/ansible_tmp/
+  when: hostvars[ansible_hostname].role == "server"
+
+- name: Step 2 - Finding openldap rpm files
+  find: paths={{ tmp_dir }}/ansible_tmp/ldap patterns="*.rpm"
+  register: rpm_result
+  when: hostvars[ansible_hostname].role == "server"
+
+- name: Step 3 - Install openldap
+  yum: name={{ item.path }} state=present
+  with_items: "{{ rpm_result.files }}"
+  when: hostvars[ansible_hostname].role == "server"
+
+- name: Step 4 - Copy openldap config
+  shell: |
+    cp /usr/share/openldap-servers/DB_CONFIG.example /var/lib/ldap/DB_CONFIG
+    chown -R ldap. /var/lib/ldap/DB_CONFIG
+  when: hostvars[ansible_hostname].role == "server"
+
+- name: Step 5 - Start openldap server
+  service: name=slapd state=started enabled=true
+  when: hostvars[ansible_hostname].role == "server"
+
+- name: Step 6 - Set admin password
+  shell: slappasswd -s Zetyun_2021
+  register: result
+  when: hostvars[ansible_hostname].role == "server"
+
+- name: Step 7 - Create changepwd.ldif
+  copy:
+    dest: changepwd.ldif
+    mode: 0644
+    content: |
+      dn: olcDatabase={0}config,cn=config
+      changetype: modify
+      add: olcRootPW
+      olcRootPW: {{ result.stdout_lines[0] }}
+  when: hostvars[ansible_hostname].role == "server"
+
+- name: Step 8 - Exec changepwd.ldif
+  shell: ldapadd -Y EXTERNAL -H ldapi:/// -f changepwd.ldif
+  when: hostvars[ansible_hostname].role == "server"
+
+- name: Step 9 - Create changedomain.ldif
+  copy:
+    dest: changedomain.ldif
+    mode: 0644
+    content: |
+      dn: olcDatabase={1}monitor,cn=config
+      changetype: modify
+      replace: olcAccess
+      olcAccess: {0}to * by dn.base="gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth" read by dn.base="cn=admin,dc=zetyun,dc=com" read by * none
+
+      dn: olcDatabase={2}hdb,cn=config
+      changetype: modify
+      replace: olcSuffix
+      olcSuffix: dc=zetyun,dc=com
+
+      dn: olcDatabase={2}hdb,cn=config
+      changetype: modify
+      replace: olcRootDN
+      olcRootDN: cn=admin,dc=zetyun,dc=com
+
+      dn: olcDatabase={2}hdb,cn=config
+      changetype: modify
+      replace: olcRootPW
+      olcRootPW: {{ result.stdout_lines[0] }}
+  when: hostvars[ansible_hostname].role == "server"
+
+- name: Step 10 - Exec changedomain.ldif
+  shell: ldapmodify -Y EXTERNAL -H ldapi:/// -f changedomain.ldif
+  when: hostvars[ansible_hostname].role == "server"
+
+- name: Step 11 - Import schemas
+  shell: |
+    ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/cosine.ldif
+    ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/nis.ldif
+    ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/inetorgperson.ldif
+    ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/collective.ldif
+    ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/corba.ldif
+    ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/duaconf.ldif
+    ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/dyngroup.ldif
+    ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/java.ldif
+    ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/misc.ldif
+    ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/openldap.ldif
+    ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/pmi.ldif
+    ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/ppolicy.ldif
+  when: hostvars[ansible_hostname].role == "server"
+
+- name: Step 12 - Create zetyun.ldif
+  copy:
+    dest: zetyun.ldif
+    mode: 0644
+    content: |
+      dn: dc=zetyun,dc=com
+      dc: zetyun
+      objectClass: top
+      objectClass: domain
+      o: zetyun
+
+      dn: cn=admin,dc=zetyun,dc=com
+      objectClass: organizationalRole
+      cn: admin
+      description: LDAP admin
+
+  when: hostvars[ansible_hostname].role == "server"
+
+- name: Step 13 - Exec zetyun.ldif
+  shell: ldapadd -x -D cn=admin,dc=zetyun,dc=com -w Zetyun_2021 -f zetyun.ldif
+  when: hostvars[ansible_hostname].role == "server"

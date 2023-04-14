@@ -1,0 +1,15 @@
+#!/bin/expect
+
+spawn kadmin.local -q "addprinc bap"
+expect "Enter password for principal \"bap@ZETYUN.COM\": "
+send "admin\r"
+expect "Re-enter password for principal \"bap@ZETYUN.COM\": "
+send "admin\r"
+expect eof
+
+spawn kadmin.local -q "addprinc aps"
+expect "Enter password for principal \"aps@ZETYUN.COM\": "
+send "admin\r"
+expect "Re-enter password for principal \"aps@ZETYUN.COM\": "
+send "admin\r"
+expect eof

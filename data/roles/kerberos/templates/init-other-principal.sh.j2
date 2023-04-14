@@ -1,0 +1,43 @@
+#!/bin/bash
+
+kadmin.local -q "xst -norandkey -k /etc/security/keytabs/bap.keytab bap"
+kadmin.local -q "xst -norandkey -k /etc/security/keytabs/aps.keytab aps"
+
+
+{% for host in groups['kerberos'] %}
+kadmin.local -q "addprinc -randkey nn/{{ host }}"
+kadmin.local -q "addprinc -randkey dn/{{ host }}"
+kadmin.local -q "addprinc -randkey jn/{{ host }}"
+kadmin.local -q "addprinc -randkey rm/{{ host }}"
+kadmin.local -q "addprinc -randkey nm/{{ host }}"
+kadmin.local -q "addprinc -randkey HTTP/{{ host }}"
+kadmin.local -q "addprinc -randkey hive/{{ host }}"
+{% endfor %}
+
+kadmin.local -q "xst -norandkey -k /etc/security/keytabs/nn.service.keytab {% for host in groups['kerberos'] -%}
+                                                                             nn/{{ host }}{% if not loop.last %} {% endif %}
+                                                                           {%- endfor %}"
+
+kadmin.local -q "xst -norandkey -k /etc/security/keytabs/dn.service.keytab {% for host in groups['kerberos'] -%}
+                                                                             dn/{{ host }}{% if not loop.last %} {% endif %}
+                                                                           {%- endfor %}"
+
+kadmin.local -q "xst -norandkey -k /etc/security/keytabs/jn.service.keytab {% for host in groups['kerberos'] -%}
+                                                                             jn/{{ host }}{% if not loop.last %} {% endif %}
+                                                                           {%- endfor %}"
+
+kadmin.local -q "xst -norandkey -k /etc/security/keytabs/rm.service.keytab {% for host in groups['kerberos'] -%}
+                                                                             rm/{{ host }}{% if not loop.last %} {% endif %}
+                                                                           {%- endfor %}"
+
+kadmin.local -q "xst -norandkey -k /etc/security/keytabs/nm.service.keytab {% for host in groups['kerberos'] -%}
+                                                                             nm/{{ host }}{% if not loop.last %} {% endif %}
+                                                                           {%- endfor %}"
+
+kadmin.local -q "xst -norandkey -k /etc/security/keytabs/spnego.service.keytab {% for host in groups['kerberos'] -%}
+                                                                             HTTP/{{ host }}{% if not loop.last %} {% endif %}
+                                                                           {%- endfor %}"
+
+kadmin.local -q "xst -norandkey -k /etc/security/keytabs/hive.service.keytab {% for host in groups['kerberos'] -%}
+                                                                             hive/{{ host }}{% if not loop.last %} {% endif %}
+                                                                           {%- endfor %}"

@@ -1,0 +1,95 @@
+- name: Creates  {{ hive_install_dir }}
+  file:
+    path: "{{ hive_install_dir }}"  
+    state: directory
+
+
+- name: Step 1 - Unarchive hive installation package
+  unarchive: src={{ playbook_dir }}/../../share/apache-hive-3.1.0-bin.tar.gz dest={{ hive_install_dir }}
+
+- name: Step 2 - Rename
+  shell: |
+    rm -rf {{ hive_install_dir }}/hive-3.1.0
+    mv {{ hive_install_dir }}/apache-hive-3.1.0-bin {{ hive_install_dir }}/hive-3.1.0
+
+- name: Step 3 Create Links {{ hive_install_dir }}/current
+  file: src={{ hive_install_dir }}/hive-3.1.0 dest={{ hive_install_dir }}/current state=link
+
+- name: Step 3 - Modify hive conf
+  template: src={{ item }}.j2 dest={{ hive_install_dir }}/current/conf/{{ item }} mode=0644
+  with_items:
+    - hive-log4j2.properties
+    - hive-site.xml
+    - hive-env.sh
+
+#- name: Step 4 - Copy spark-defaults.cof
+#  copy: src=/tmp/{{ groups['spark_client'][0] }}{{ spark_home }}/conf/spark-defaults.conf dest={{ hive_install_dir }}/hive-2.3.8/conf mode=0644
+
+# - name: Step 5 - Check whether the pg client is installed
+#   shell: psql -V
+#   ignore_errors: true
+#   register: result
+
+# - name: Step 6 - Copy pg install client rpm file
+#   copy: src={{ item }} dest={{ tmp_dir }}/ansible_tmp/
+#   when: result.failed == true
+#   with_items:
+#     - postgresql13-13.6-1PGDG.rhel7.x86_64.rpm
+#     - postgresql13-libs-13.6-1PGDG.rhel7.x86_64.rpm
+
+# - name: Step 7 - Install pg client
+#   shell: yum localinstall -y {{ tmp_dir }}/ansible_tmp/postgresql13-*
+#   when: result.failed == true
+
+
+- name: Step 7 cp {{ hive_install_dir }}/current/lib/postgresql-42.6.0.jar
+  copy: src=postgresql-42.6.0.jar dest={{ hive_install_dir }}/current/lib/postgresql-42.6.0.jar
+
+- name: Step 8 - Initialize hive metadata
+  shell: |
+    mv {{ hive_install_dir }}/current/lib/postgresql-9.4.1208.jre7.jar {{ hive_install_dir }}/current/lib/postgresql-9.4.1208.jre7.bak
+  ignore_errors: true
+
+- name: Step 8 - Initialize hive metadata
+  shell: |
+    {{ hive_install_dir }}/current/bin/schematool -dbType postgres -initSchema -verbose
+
+# - name: Step 9 - Copy net tools rpm file
+#   copy: src=net-tools-2.0-0.25.20131004git.el7.x86_64.rpm dest={{ tmp_dir }}/ansible_tmp/
+
+# - name: Step 10 - Install net tools
+#   yum: name={{ tmp_dir }}/ansible_tmp/net-tools-2.0-0.25.20131004git.el7.x86_64.rpm state=present
+
+- name: Step 11 - Copy hive start|stop script
+  template: src=hiveservice.sh dest={{ hive_install_dir }}/current mode=0755
+
+- name: mkdir 
+  shell: |
+    mkdir {{ hive_install_dir }}/current/logs
+    chown -R {{ user }}:{{ usergroup }} {{ hive_install_dir }}/current/logs
+ 
+- name: Step 8 - cp hive_auto_restart.sh
+  template: src=hive_auto_restart.sh.j2 dest={{ hive_install_dir }}/current/hive_auto_restart.sh mode=0755
+
+- name: hiveAutoStart
+  cron:
+    name: hiveAutoStart
+    special_time: reboot
+    user: "{{ user }}"
+    job: "{{ hive_install_dir }}/current/hive_auto_restart.sh"
+
+- name: Step 12 - Start hive metastore and hiveserver2
+  become: true
+  become_user: "{{ user }}"
+  shell: |
+    cd {{ hive_install_dir }}/current
+    nohup ./hiveservice.sh restart >> logs/hive_start.log 2>&1 &
+
+- name: Check if RunJar exists 
+  shell: source /etc/profile ; jps |grep RunJar |wc -l
+  changed_when: false 
+  register: service_status 
+  until: "'2' in service_status.stdout"
+  retries: 3
+  delay: 10
+

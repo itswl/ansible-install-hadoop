@@ -1,0 +1,132 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<configuration>
+	<property>
+        <name>mapred.mapper.new-api</name>
+        <value>false</value>
+	</property>
+
+	<property>
+		<name>mapred.reducer.new-api</name>
+		<value>false</value>
+	</property>
+
+	<property>
+		<name>hive.execution.engine</name>
+		<value>mr</value>
+	</property>
+
+	<property>
+		<name>hive.compactor.initiator.on</name>
+		<value>true</value>
+	</property>
+
+	<property>
+		<name>hive.compactor.worker.threads</name>
+		<value>10</value>
+	</property>
+
+	<property>
+		<name>hive.support.concurrency</name>
+		<value>true</value>
+	</property>
+
+	<property>
+		<name>hive.exec.dynamic.partition.mode</name>
+		<value>nonstrict</value>
+	</property>
+
+	<property>
+		<name>hive.txn.manager</name>
+		<value>org.apache.hadoop.hive.ql.lockmgr.DbTxnManager</value>
+	</property>
+
+	<property>
+		<name>hive.server2.enable.doAs</name>
+		<value>true</value>
+	</property>
+
+	<property>
+		<name>hive.server2.proxy.user</name>
+		<value>{{ hiveserver2_proxy_user }}</value>
+	</property>
+
+	<property>
+		<name>bucket_count</name>
+		<value>10</value>
+	</property>
+
+	<!--property>
+		<name>javax.jdo.option.ConnectionDriverName</name>
+		<value>org.apache.derby.jdbc.ClientDriver</value>
+	</property>
+
+	<property>
+		<name>javax.jdo.option.ConnectionURL</name>
+		<value>jdbc:derby://localhost:1527/hive;create=true</value>
+	</property-->
+
+	<property>
+		<name>javax.jdo.option.ConnectionDriverName</name>
+		<value>org.postgresql.Driver</value>
+	</property>
+
+	<property>
+		<name>javax.jdo.option.ConnectionURL</name>
+		<value>jdbc:postgresql://{{ pg_server }}:{{ pg_port }}/hive</value>
+	</property>
+
+	<property>
+		<name>javax.jdo.option.ConnectionUserName</name>
+		<value>{{ pg_user }}</value>
+	</property>
+
+	<property>
+		<name>javax.jdo.option.ConnectionPassword</name>
+		<value>{{ pg_password }}</value>
+	</property>
+
+    <property>
+        <name>hive.server2.authentication</name>
+        <value>{{ 'KERBEROS' if kerberos_auth else 'NONE' }}</value>
+    </property>
+
+    <property>
+        <name>hive.metastore.sasl.enabled</name>
+        <value>{{ 'true' if kerberos_auth else 'false' }}</value>
+    </property>
+
+{% if kerberos_auth == true %}
+
+    <property>
+        <name>hive.server2.authentication.kerberos.principal</name>
+        <value>hive/_HOST@ZETYUN.COM</value>
+    </property>
+
+    <property>
+        <name>hive.server2.authentication.kerberos.keytab</name>
+        <value>/etc/security/keytabs/hive.service.keytab</value>
+    </property>
+
+    <property>
+        <name>hive.server2.authentication.spnego.keytab</name>
+        <value>/etc/security/keytabs/hive.service.keytab</value>
+    </property>
+
+    <property>
+        <name>hive.server2.authentication.spnego.principal</name>
+        <value>hive/_HOST@ZETYUN.COM</value>
+    </property>
+
+    <property>
+        <name>hive.metastore.kerberos.keytab.file</name>
+        <value>/etc/security/keytabs/hive.service.keytab</value>
+    </property>
+
+    <property>
+        <name>hive.metastore.kerberos.principal</name>
+        <value>hive/_HOST@ZETYUN.COM</value>
+    </property>
+{% endif %}
+</configuration>

@@ -1,0 +1,3 @@
+#hadoop_install_dir: "/opt"
+#tmp_dir: "/tmp"
+#hadoop_super_user: "root"

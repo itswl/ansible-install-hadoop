@@ -1,0 +1,135 @@
+- name: Step 1 - Copy psmisc install rpm file
+  copy: src=psmisc-22.20-17.el7.x86_64.rpm dest={{ tmp_dir }}/ansible_tmp/
+  when: kerberos_auth == true
+
+- name: Step 2 - Install psmisc
+  yum: name={{ tmp_dir }}/ansible_tmp/psmisc-22.20-17.el7.x86_64.rpm state=present
+  when: kerberos_auth == true
+
+- name: Step 2 - Rename
+  shell: |
+    rm -rf {{ hadoop_install_dir }}/hadoop-3.2.2
+
+- name: Creates  {{ hadoop_install_dir }}
+  file:
+    path: "{{ hadoop_install_dir }}"  
+    state: directory
+
+- name: Step 3 - Unarchive hadoop install package
+  unarchive: src={{ playbook_dir }}/../../share/hadoop-3.2.2.tar.gz dest={{ hadoop_install_dir }}
+
+- name: Step 3 Create Links {{ hadoop_install_dir }}/current
+  file: src={{ hadoop_install_dir }}/hadoop-3.2.2 dest={{ hadoop_install_dir }}/current state=link
+
+- name: Step 4 - Modify hadoop etc files
+  template: src={{ item }}.j2 dest={{ hadoop_install_dir }}/current/etc/hadoop/{{ item }} mode=0644
+  with_items:
+    - core-site.xml
+    - hdfs-site.xml
+    - yarn-site.xml
+    - mapred-site.xml
+    - hadoop-env.sh
+    - workers
+    - container-executor.cfg
+
+- name: Step 5 - Modify ssl files
+  template: src={{ item }}.j2 dest={{ hadoop_install_dir }}/current/etc/hadoop/{{ item }} mode=0644
+  with_items:
+    - ssl-server.xml
+    - ssl-client.xml
+  when: kerberos_auth == true
+
+- name: Step 5 - mkdir -p {{ hadoop_install_dir }}/current/logs
+  shell: |
+    mkdir -p {{ hadoop_install_dir }}/current/logs
+    chown -R {{ user }}:{{ usergroup}} {{ hadoop_install_dir }}/current/logs
+
+- name: mkdir 
+  shell: |
+    mkdir -p {{ hadoop_datanode_data_dir1 }}
+    mkdir -p {{ hadoop_datanode_data_dir2 }}
+    mkdir -p {{ hadoop_data_dir }}
+    chown -R {{ user }}:{{ usergroup}} {{ hadoop_data_dir }}
+    chown -R {{ user }}:{{ usergroup}} {{ hadoop_datanode_data_dir1 }}
+    chown -R {{ user }}:{{ usergroup}} {{ hadoop_datanode_data_dir2 }}
+    chown root:{{ usergroup}} {{ hadoop_install_dir }}/current/bin/container-executor
+    chmod 6050 {{ hadoop_install_dir }}/current/bin/container-executor
+
+
+- name: Step 6 - Start journalnode
+  shell: |
+    nohup {{ hadoop_install_dir }}/current/bin/hdfs --daemon start journalnode >> {{ hadoop_install_dir }}/current/init_journalnode.log 2>&1 &
+    sleep 10
+  when: ansible_hostname in nn_server
+
+- name: Check if journalnode exists 
+  shell: source /etc/profile ; jps 
+  changed_when: false 
+  register: service_status 
+  until: "'JournalNode' in service_status.stdout"
+  retries: 3
+  delay: 10
+  when: ansible_hostname in nn_server
+
+- name: Step 7 - Format namenode
+  shell: |
+    nohup {{ hadoop_install_dir }}/current/bin/hdfs namenode -format -clusterId zetyun-hdfs > {{ hadoop_install_dir }}/current/init.log 2>&1 &
+    sleep 10
+  when: ansible_hostname == nn_server[0]
+
+- name: Step 8 - Start namenode
+  shell: |
+    nohup {{ hadoop_install_dir }}/current/bin/hdfs --daemon start namenode > {{ hadoop_install_dir }}/current/init.log 2>&1 &
+    sleep 10
+  when: ansible_hostname == nn_server[0]
+
+- name: Check if NameNode exists 
+  shell: source /etc/profile ; jps 
+  changed_when: false 
+  register: service_status 
+  until: "'NameNode' in service_status.stdout"
+  retries: 3
+  delay: 10
+  when: ansible_hostname == nn_server[0]
+
+- name: Step 9 - Sync namenode metadata directories
+  shell: |
+    yes| {{ hadoop_install_dir }}/current/bin/hdfs namenode -bootstrapStandby
+  when: ansible_hostname in nn_server and ansible_hostname != nn_server[0]
+
+- name: Step 10 - Initialize required state in ZooKeeper
+  shell: |
+    yes | {{ hadoop_install_dir }}/current/bin/hdfs zkfc -formatZK
+    sleep 10
+  when: ansible_hostname == nn_server[0]
+
+- name: Step 11 - Stop namenode and journalnode
+  shell: "{{ hadoop_install_dir }}/current/sbin/stop-dfs.sh"
+  when: ansible_hostname == nn_server[0]
+
+- name: Step 12 - Start hdfs cluster
+  shell: "{{ hadoop_install_dir }}/current/sbin/start-dfs.sh"
+  when: ansible_hostname == nn_server[0]
+
+- name: Step 13 - Start yarn cluster
+  shell: "{{ hadoop_install_dir }}/current/sbin/start-yarn.sh"
+  when: ansible_hostname == rm_server[0]
+
+
+- name: check 
+  shell: source /etc/profile ; jps 
+  changed_when: false 
+  register: service_status 
+
+- debug: var="service_status.stdout"
+
+
+- name: Step 8 - cp hadoop_auto_restart.sh
+  template: src=hadoop_auto_restart.sh.j2 dest={{ hadoop_install_dir }}/current/hadoop_auto_restart.sh mode=0755
+
+- name: hadoopAutoStart
+  cron:
+    name: hadoopAutoStart
+    special_time: reboot
+    user: "{{ user }}"
+    job: "{{ hadoop_install_dir }}/current/hadoop_auto_restart.sh"

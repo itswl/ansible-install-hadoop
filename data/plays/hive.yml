@@ -1,0 +1,9 @@
+
+#- hosts: spark_client
+#  tasks:
+#    - name: Fetch spark-defaults.conf
+#      fetch: src={{ spark_home }}/conf/spark-defaults.conf dest={{ tmp_dir }}/ansible_tmp/
+
+- hosts: hive
+  roles:
+    - { role: ../roles/hive}

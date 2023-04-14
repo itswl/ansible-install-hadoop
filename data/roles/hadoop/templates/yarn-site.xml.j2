@@ -1,0 +1,148 @@
+<?xml version="1.0"?>
+<!--
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License. See accompanying LICENSE file.
+-->
+<configuration>
+    <property>
+        <name>yarn.scheduler.maximum-allocation-mb</name>
+        <value>8192</value>
+    </property>
+
+    <property>
+        <name>yarn.nodemanager.resource.memory-mb</name>
+        <value>8192</value>
+    </property>
+
+    <property>
+        <name>yarn.nodemanager.aux-services</name>
+        <value>mapreduce_shuffle</value>
+    </property>
+
+    <property>
+        <name>yarn.nodemanager.env-whitelist</name>
+        <value>JAVA_HOME,HADOOP_HOME,HADOOP_COMMON_HOME,HADOOP_HDFS_HOME,HADOOP_CONF_DIR,CLASSPATH_PREPEND_DISTCACHE,HADOOP_YARN_HOME,HADOOP_MAPRED_HOME</value>
+    </property>
+
+    <property>
+        <name>yarn.nodemanager.local-dirs</name>
+        <value>file://${hadoop.tmp.dir}/yarn/data1,file://${hadoop.tmp.dir}/yarn/data2</value>
+    </property>
+
+    <property>
+        <name>yarn.node-attribute.fs-store.root-dir</name>
+        <value>file://${hadoop.tmp.dir}/yarn/attribute</value>
+    </property>
+
+    <property>
+        <name>yarn.resourcemanager.ha.enabled</name>
+        <value>true</value>
+    </property>
+
+    <property>
+        <name>yarn.resourcemanager.cluster-id</name>
+        <value>zetyun-yarn</value>
+    </property>
+
+    <property>
+        <name>yarn.resourcemanager.ha.rm-ids</name>
+        <value>{% for host in rm_server -%}
+            rm{{ loop.index }}{% if not loop.last %},{% endif %}
+        {%- endfor %}</value>
+    </property>
+
+{% for host in rm_server %}
+    <property>
+        <name>yarn.resourcemanager.hostname.rm{{ loop.index }}</name>
+        <value>{{ host }}</value>
+    </property>
+
+    <property>
+         <name>yarn.resourcemanager.webapp.address.rm{{ loop.index }}</name>
+         <value>{{ host }}:8088</value>
+    </property>
+{% if not loop.last %}
+
+{% endif %}
+{% endfor %}
+
+    <property>
+        <name>yarn.resourcemanager.zk-address</name>
+        <value>{% for host in groups['zookeeper'] -%}
+            {{ host }}:2181{% if not loop.last %},{% endif %}
+        {%- endfor %}</value>
+    </property>
+
+    <property>
+        <name>yarn.resourcemanager.recovery.enabled</name>
+        <value>true</value>
+    </property>
+
+    <property>
+        <name>yarn.resourcemanager.store.class</name>
+        <value>org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore</value>
+    </property>
+
+{% if kerberos_auth %}
+    <property>
+    	<name>yarn.resourcemanager.principal</name>
+    	<value>rm/_HOST@ZETYUN.COM</value>
+    </property>
+
+    <property>
+    	<name>yarn.resourcemanager.keytab</name>
+    	<value>/etc/security/keytabs/rm.service.keytab</value>
+    </property>
+
+    <property>
+    	<name>yarn.nodemanager.principal</name>
+    	<value>nm/_HOST@ZETYUN.COM</value>
+    </property>
+
+    <property>
+    	<name>yarn.nodemanager.keytab</name>
+    	<value>/etc/security/keytabs/nm.service.keytab</value>
+    </property>
+
+    <property>
+    	<name>yarn.nodemanager.webapp.https.address</name>
+    	<value>	0.0.0.0:8044</value>
+    </property>
+
+{% endif %}
+
+{% for host in rm_server %}
+    <property>
+        <name>yarn.resourcemanager.webapp.https.address.rm{{ loop.index }}</name>
+        <value>{{ host }}:8090</value>
+    </property>
+{% if not loop.last %}
+
+{% endif %}
+{% endfor %}
+
+
+    <property>
+        <name>yarn.nodemanager.container-executor.class</name>
+        <value>org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor</value>
+    </property>
+
+    <property>
+        <name>yarn.nodemanager.linux-container-executor.group</name>
+        <value>{{ hadoop_super_user }}</value>
+    </property>
+
+    <!--property>
+    	<name>yarn.nodemanager.linux-container-executor.path</name>
+    	<value>${hadoop.tmp.dir}/yarn/container-executor</value>
+    </property-->
+</configuration>

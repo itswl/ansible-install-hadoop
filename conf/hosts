@@ -1,0 +1,59 @@
+#所有节点都需安装
+[jdk]
+imwl-01
+imwl-02
+imwl-03
+
+#须配置为单数节点
+[zookeeper]
+imwl-01 myid=1
+imwl-02 myid=2
+imwl-03 myid=3
+
+#所有目录配置项均不能位于根目录，且目录结尾不加/，下同
+[zookeeper:vars]
+zk_install_dir=/opt/bigdata/zookeeper
+
+[hadoop]
+imwl-01
+imwl-02
+imwl-03
+
+[hadoop:vars]
+nn_server=["imwl-01", "imwl-02"]
+rm_server=["imwl-01", "imwl-03"]
+hadoop_super_user=bap
+#hadoop数据路径，需保证磁盘容量充足
+hadoop_data_dir=/mnt/hadoop/metadata
+#hdfs数据路径，建议以磁盘的形式进行挂载，数据存放在各个路径下的hdfs/data路径
+hadoop_datanode_data_dir=["/mnt/hadoop/data1", "/mnt/hadoop/data2"]
+hadoop_datanode_data_dir1="/mnt/hadoop/data1"
+hadoop_datanode_data_dir2="/mnt/hadoop/data2"
+
+[hive]
+imwl-02
+
+[hive:vars]
+hive_install_dir=/opt/bigdata/hive
+hiveserver2_proxy_user=bap
+pg_server=bap-ha.postgres-operator.svc.cluster.local
+pg_port=5432
+pg_user=postgres
+pg_password=Zetyun_2021!
+
+
+#所有节点都需安装，server必须配置在第一行，其余节点配置成client
+[kerberos]
+imwl-03 role=server
+imwl-01 role=client
+imwl-02 role=client
+
+
+[all:vars]
+user=bap
+usergroup=bap
+hadoop_install_dir=/opt/bigdata/hadoop
+tmp_dir=/tmp
+kerberos_auth=False
+jdk_install_dir=/opt/bigdata/java
+

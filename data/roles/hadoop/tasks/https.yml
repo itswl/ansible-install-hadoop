@@ -1,0 +1,50 @@
+- name: Step 1 - Copy openssl install rpm file
+  copy: src={{ item }} dest={{ tmp_dir }}/ansible_tmp/
+  with_items:
+    - openssl-1.0.2k-25.el7_9.x86_64.rpm
+    - openssl-libs-1.0.2k-25.el7_9.x86_64.rpm
+
+- name: Step 2 - Install openssl
+  yum:
+    name: ['{{ tmp_dir }}/ansible_tmp/openssl-1.0.2k-25.el7_9.x86_64.rpm', '{{ tmp_dir }}/ansible_tmp/openssl-libs-1.0.2k-25.el7_9.x86_64.rpm']
+    state: present
+
+- name: Step 3 - Create certificate directory
+  file: name=/opt/security/kerberos_https state=directory
+
+- name: Step 4 - Copy https-server.sh
+  template: src=https-server.sh.j2 dest=/opt/security/kerberos_https/https-server.sh mode=0755
+  when: ansible_hostname == nn_server[0]
+
+- name: Step 5 - Copy https-client.sh
+  template: src=https-client.sh.j2 dest=/opt/security/kerberos_https/https-client.sh mode=0755
+
+- name: Step 6 - Exec https-server.sh
+  shell: /opt/security/kerberos_https/https-server.sh
+  args:
+    chdir: /opt/security/kerberos_https
+  when: ansible_hostname == nn_server[0]
+
+- name: Step 7 - Find bd_ca_cert and bd_ca_key
+  find: paths=/opt/security/kerberos_https patterns="bd_ca*"
+  register: bd_ca
+  when: ansible_hostname == nn_server[0]
+
+- name: Step 8 - Fetch bd_ca_cert and bd_ca_key
+  fetch: src="{{ item.path }}" dest=/tmp
+  with_items: "{{ bd_ca.files }}"
+  when: ansible_hostname == nn_server[0]
+
+- name: Step 9 - Copy bd_ca_cert and bd_ca_key
+  copy: src=/tmp/{{ nn_server[0] }}/opt/security/kerberos_https dest=/opt/security
+#  copy: src=/tmp/{{ nn_server[0] }}/opt/security/kerberos_https/{{ item }} dest=/opt/security/kerberos_https
+#  with_items:
+#    - bd_ca_cert
+#    - bd_ca_key
+  when: ansible_hostname != nn_server[0]
+
+- name: Step 10 - Exec https-client.sh
+  shell: /opt/security/kerberos_https/https-client.sh
+  args:
+    chdir: /opt/security/kerberos_https
+

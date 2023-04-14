@@ -1,0 +1,4 @@
+
+- hosts: jdk
+  roles:
+    - { role: ../roles/jdk}

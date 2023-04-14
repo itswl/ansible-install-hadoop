@@ -1,0 +1,82 @@
+- name: Step 1 - Start zookeeper service
+  become: true
+  become_user: "{{ user }}"
+  shell: |
+    source /etc/profile
+    {{ zk_install_dir }}/current/bin/zkServer.sh stop
+  ignore_errors: true
+
+- name: Step 1 - Check if zookeeper exists 
+  shell:  jps 
+  ignore_errors: yes 
+  changed_when: false 
+  register: service_status 
+  until: "'QuorumPeerMain' not in service_status.stdout"
+  retries: 3
+  delay: 10
+
+- name: Creates  {{ zk_install_dir }}
+  file:
+    path: "{{ zk_install_dir }}"  
+    state: directory
+
+- name: Step 1 - Unarchive zookeeper installation package
+  unarchive: src={{ playbook_dir }}/../../share/apache-zookeeper-3.7.0-bin.tar.gz dest={{ zk_install_dir }}
+
+- name: Step 2 - Rename
+  shell: |
+    rm -rf {{ zk_install_dir }}/zookeeper-3.7.0
+    mv {{ zk_install_dir }}/apache-zookeeper-3.7.0-bin {{ zk_install_dir }}/zookeeper-3.7.0
+
+- name: Step 3 Create Links {{ zk_install_dir }}/elasticsearch/current
+  file: src={{ zk_install_dir }}/zookeeper-3.7.0 dest={{ zk_install_dir }}/current state=link
+
+- name: Step 3 - Make zookeeper data dir
+  file: dest={{ zk_install_dir }}/current/data mode=0755 state=directory
+
+- name: Step 4 - Copy myid file
+  template: src=myid.j2 dest={{ zk_install_dir }}/current/data/myid mode=0644
+
+- name: Step 5 - Modify zookeeper conf
+  template: src=zoo.cfg.j2 dest={{ zk_install_dir }}/current/conf/zoo.cfg mode=0644
+
+- name: 更改用户权限 chown {{ user }}:{{ usergroup }} -R {{ zk_install_dir }}
+  shell: "chown {{ user }}:{{ usergroup }} -R {{ zk_install_dir }}"
+
+- name: Step 6 - Start zookeeper service {{ zk_install_dir }}/current/bin/zkServer.sh start
+  become: true
+  become_user: "{{ user }}"
+  shell: |
+    source /etc/profile
+    {{ zk_install_dir }}/current/bin/zkServer.sh start
+
+- name: Step 7 - Check if zookeeper exists 
+  shell:  jps 
+  ignore_errors: yes 
+  changed_when: false 
+  register: service_status 
+  until: "'QuorumPeerMain' in service_status.stdout"
+  retries: 3
+  delay: 10
+
+
+- name: check {{ zk_install_dir }}/current/bin/zkServer.sh status
+  shell:  |
+    {{ zk_install_dir }}/current/bin/zkServer.sh status
+  register: file_status
+  until: "'follower' or 'leader' in file_status.stdout"
+  retries: 3
+  delay: 10
+
+- debug: var="file_status.stdout"
+
+
+- name: Step 8 - cp zookeeper_auto_restart.sh
+  template: src=zookeeper_auto_restart.sh.j2 dest={{ zk_install_dir }}/current/zookeeper_auto_restart.sh mode=0755
+
+- name: zookeeperAutoStart
+  cron:
+    name: zookeeperAutoStart
+    special_time: reboot
+    user: "{{ user }}"
+    job: "{{ zk_install_dir }}/current/zookeeper_auto_restart.sh"

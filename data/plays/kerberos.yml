@@ -1,0 +1,4 @@
+
+- hosts: kerberos
+  roles:
+    - { role: ../roles/kerberos}

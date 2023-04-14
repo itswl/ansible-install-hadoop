@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<!--
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License. See accompanying LICENSE file.
+-->
+
+<!-- Put site-specific property overrides in this file. -->
+
+<configuration>
+    <property>
+        <name>fs.defaultFS</name>
+        <value>hdfs://zetyun-hdfs</value>
+    </property>
+
+    <property>
+        <name>hadoop.tmp.dir</name>
+        <value>{{ hadoop_data_dir }}/hadoop</value>
+    </property>
+
+    <property>
+    	<name>ha.zookeeper.quorum</name>
+    	<value>{% for host in groups['zookeeper'] -%}
+    	    {{ host }}:2181{% if not loop.last %},{% endif %}
+    	{%- endfor %}</value>
+    </property>
+
+    <property>
+        <name>hadoop.proxyuser.{{ hadoop_super_user }}.hosts</name>
+        <value>*</value>
+    </property>
+
+    <property>
+        <name>hadoop.proxyuser.{{ hadoop_super_user }}.groups</name>
+        <value>*</value>
+    </property>
+    
+    <property>
+        <name>hadoop.security.authentication</name>
+        <value>{{ 'kerberos' if kerberos_auth else 'simple' }}</value>
+    </property>
+
+    <property>
+        <name>hadoop.security.authorization</name>
+        <value>{{ 'true' if kerberos_auth else 'false' }}</value>
+    </property>
+
+{% if kerberos_auth == true %}
+    <property>
+        <name>hadoop.security.auth_to_local</name>
+        <value>
+        RULE:[2:$1/$2@$0]([ndj]n/.*@ZETYUN.COM)s/.*/{{ hadoop_super_user }}/
+        RULE:[2:$1/$2@$0]([rn]m/.*@ZETYUN.COM)s/.*/{{ hadoop_super_user }}/
+        RULE:[2:$1/$2@$0](hive/.*@ZETYUN.COM)s/.*/{{ hadoop_super_user }}/
+        DEFAULT
+        </value>
+    </property>
+
+    <property>
+        <name>hadoop.rpc.protection</name>
+        <value>authentication</value>
+    </property>
+{% endif %}
+
+</configuration>

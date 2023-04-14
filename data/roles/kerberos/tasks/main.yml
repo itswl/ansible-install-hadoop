@@ -1,0 +1,7 @@
+- import_tasks: openldap.yml
+  when: 
+   - "kerberos_auth == true"
+
+- import_tasks: kerberos.yml
+  when: 
+   - "kerberos_auth == true"

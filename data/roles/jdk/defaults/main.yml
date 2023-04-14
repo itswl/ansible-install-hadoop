@@ -1,0 +1,8 @@
+tmp_dir: "/tmp"
+
+jdk_install: "yes"  # 改为 yes 后 按需修改下面配置
+
+jdk_install_dir: "/opt/bigdata/java"
+java_package_name: "jdk-8u321-linux-x64.tar.gz"
+# 解压后的文件夹名，以安装包解压后为准 # 注释写在 同一行也会被识别到变量中
+java_dir_name: jdk1.8.0_321

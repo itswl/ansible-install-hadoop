@@ -1,0 +1,8 @@
+#!/bin/expect
+
+spawn openssl req -new -x509 -keyout bd_ca_key -out bd_ca_cert -days 9999 -subj "/C=CN/ST=shanghai/L=shanghai/O=zetyun/OU=mobile/CN={{ nn_server[0] }}"
+expect "Enter PEM pass phrase:"
+send "123456\r"
+expect "Verifying - Enter PEM pass phrase:"
+send "123456\r"
+expect eof

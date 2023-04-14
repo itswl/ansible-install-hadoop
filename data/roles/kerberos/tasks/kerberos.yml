@@ -1,0 +1,135 @@
+- name: Step 1 - Unarchive expect installation package
+  unarchive: src=expect.tar.gz dest={{ tmp_dir }}/ansible_tmp/
+
+- name: Step 2 - Unarchive kerberos server installation package
+  unarchive: src=kerberos-server.tar.gz dest={{ tmp_dir }}/ansible_tmp/
+  when: hostvars[ansible_hostname].role == "server"
+
+- name: Step 3 - Unarchive kerberos client installation package
+  unarchive: src=kerberos-client.tar.gz dest={{ tmp_dir }}/ansible_tmp/
+
+- name: Step 4 - Finding kerberos and expect rpm files
+  find: paths={{ tmp_dir }}/ansible_tmp/kerberos patterns="*.rpm"
+  register: rpm_result
+
+- name: Step 5 - Install kerberos and expect
+  yum: name={{ item.path }} state=present
+  with_items: "{{ rpm_result.files }}"
+
+- name: Step 6 - Copy kerberos.schema
+  shell: cp /usr/share/doc/krb5-server-ldap-1.15.1/kerberos.schema /etc/openldap/schema/
+  when: hostvars[ansible_hostname].role == "server"
+
+- name: Step 7 - Create schema_convert.conf   cd /opt
+  copy:
+    dest: schema_convert.conf
+    mode: 0644
+    content: |
+      include /etc/openldap/schema/core.schema
+      include /etc/openldap/schema/cosine.schema
+      include /etc/openldap/schema/nis.schema
+      include /etc/openldap/schema/inetorgperson.schema
+      include /etc/openldap/schema/collective.schema
+      include /etc/openldap/schema/corba.schema
+      include /etc/openldap/schema/duaconf.schema
+      include /etc/openldap/schema/dyngroup.schema
+      include /etc/openldap/schema/java.schema
+      include /etc/openldap/schema/misc.schema
+      include /etc/openldap/schema/openldap.schema
+      include /etc/openldap/schema/pmi.schema
+      include /etc/openldap/schema/ppolicy.schema
+      include /etc/openldap/schema/kerberos.schema
+  when: hostvars[ansible_hostname].role == "server"
+
+- name: Step 8 - Create kerberos schema
+  shell: slapcat -f schema_convert.conf -F /tmp/ -n 0 -s "cn={13}kerberos,cn=schema,cn=config" > /tmp/cn=kerberos.ldif
+  when: hostvars[ansible_hostname].role == "server"
+
+- name: Step 9 - Modify kerberos.ldif
+  replace: path=/tmp/cn=kerberos.ldif regexp='{{ item }}' replace='#{{ item }}'
+  with_items:
+    - structuralObjectClass
+    - entryUUID
+    - creatorsName
+    - createTimestamp
+    - entryCSN
+    - modifiersName
+    - modifyTimestamp
+  when: hostvars[ansible_hostname].role == "server"
+
+- name: Step 10 - Import kerberos schema
+  shell: ldapadd -x -D "cn=config" -w Zetyun_2021 -f /tmp/cn\=kerberos.ldif
+  when: hostvars[ansible_hostname].role == "server"
+
+- name: Step 11 - Restart openldap
+  service: name=slapd state=restarted
+  when: hostvars[ansible_hostname].role == "server"
+
+- name: Step 12 - Modify kerberos conf
+  template: src={{ item.src }} dest={{ item.dest }} mode=0644
+  with_items:
+    - { src: 'kdc.conf.j2', dest: '/var/kerberos/krb5kdc/kdc.conf' }
+    - { src: 'kadm5.acl.j2', dest: '/var/kerberos/krb5kdc/kadm5.acl' }
+  when: hostvars[ansible_hostname].role == "server"
+
+- name: Step 13 - Modify kerberos conf
+  template: src=krb5.conf.j2 dest=/etc/krb5.conf mode=0644
+
+- name: Step 14 - Generate password of ldap database
+  script: generate-passwd.sh
+  when: hostvars[ansible_hostname].role == "server"
+
+- name: Step 15 - Create kerberos.ldif
+  copy:
+    dest: kerberos.ldif
+    mode: 0644
+    content: |
+      dn: cn=kerberos,dc=zetyun,dc=com
+      cn: kerberos
+      objectClass: organizationalRole
+  when: hostvars[ansible_hostname].role == "server"
+
+- name: Step 16 - Add kerberos dn
+  shell: ldapadd -x -D cn=admin,dc=zetyun,dc=com -w Zetyun_2021 -f kerberos.ldif
+  when: hostvars[ansible_hostname].role == "server"
+
+- name: Step 17 - Create kerberos database in ldap
+  script: init-database.sh
+  when: hostvars[ansible_hostname].role == "server"
+
+- name: Step 18 - Start krb5kdc
+  service: name=krb5kdc state=started enabled=yes
+  when: hostvars[ansible_hostname].role == "server"
+
+- name: Step 19 - Start kadmin
+  service: name=kadmin state=started enabled=yes
+  when: hostvars[ansible_hostname].role == "server"
+
+- name: Step 20 - Copy init-bap-principal.sh and init-other-principal.sh
+  template: src={{ item }}.j2 dest={{ tmp_dir }}/ansible_tmp/{{ item }} mode=0755
+  with_items:
+    - init-bap-principal.sh
+    - init-other-principal.sh
+  when: hostvars[ansible_hostname].role == "server"
+
+- name: Step 21 - Initialize principals and generate keytab files
+  shell: |
+    mkdir /etc/security/keytabs
+    {{ tmp_dir }}/ansible_tmp/init-bap-principal.sh
+    {{ tmp_dir }}/ansible_tmp/init-other-principal.sh
+    chmod -R 777 /etc/security/keytabs
+  when: hostvars[ansible_hostname].role == "server"
+
+- name: Step 22 - Find keytab files
+  find: paths=/etc/security/keytabs patterns="*.keytab"
+  register: keytabs
+  when: hostvars[ansible_hostname].role == "server"
+
+- name: Step 23 - Fetch keytab files
+  fetch: src="{{ item.path }}" dest=/tmp
+  with_items: "{{ keytabs.files }}"
+  when: hostvars[ansible_hostname].role == "server"
+
+- name: Step 24 - Copy keytab files
+  copy: src=/tmp/{{ groups['kerberos'][0] }}/etc/security/keytabs dest=/etc/security
+  when: hostvars[ansible_hostname].role == "client"

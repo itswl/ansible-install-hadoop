@@ -1,0 +1,10 @@
+#!/bin/bash
+set -e
+source /etc/profile
+source ~/.bashrc
+
+sleep 60
+
+{{ hadoop_install_dir }}/current/sbin/start-dfs.sh
+
+{{ hadoop_install_dir }}/current/sbin/start-yarns.sh

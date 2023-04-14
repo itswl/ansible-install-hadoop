@@ -1,0 +1,9 @@
+#!/bin/bash
+set -e
+source /etc/profile
+source ~/.bashrc
+
+sleep 90
+
+cd {{ hive_install_dir }}/current
+nohup ./hiveservice.sh restart >> logs/hive_start.log 2>&1 &

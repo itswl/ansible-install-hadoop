@@ -1,0 +1,8 @@
+#!/bin/bash
+set -e
+source /etc/profile
+source ~/.bashrc
+
+sleep 60
+
+{{ zk_install_dir }}/current/bin/zkServer.sh restart
