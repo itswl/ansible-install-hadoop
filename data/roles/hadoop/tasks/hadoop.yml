@@ -133,3 +133,22 @@
     special_time: reboot
     user: "{{ user }}"
     job: "{{ hadoop_install_dir }}/current/hadoop_auto_restart.sh"
+    
+ # 防止多次运行重复写入文件
+- name: Delete /etc/profile.d/ansible_hadoop.sh
+  file: 
+    path: /etc/profile.d/ansible_hadoop.sh    
+    state: absent
+
+- name: Generate /etc/profile.d/ansible_hadoop.sh
+  file:
+    path: /etc/profile.d/ansible_hadoop.sh    
+    mode: 0644      
+    state: touch
+  ignore_errors: true 
+
+- name: Add hadoop_bin To /etc/profile.d/ansible_hadoop.sh
+  shell: /bin/echo export {{ item }} >> /etc/profile.d/ansible_hadoop.sh   
+  with_items:
+      - PATH={{ hadoop_install_dir }}/current/bin:\$PATH
+
