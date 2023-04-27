@@ -109,6 +109,8 @@
    [root@bap-1 hive-2.3.8]# bin/hiveservice.sh restart
    ```
 
+
+官方下载的 hive 需要替换 guava.jar 这个 jar 包，用 hadoop 里面的 jar 包替换
    
 
    
