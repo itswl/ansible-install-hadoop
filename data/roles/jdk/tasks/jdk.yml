@@ -16,7 +16,7 @@
   register: bin_file_status
 
 - name: Unzip Package To {{ jdk_install_dir }}/
-  unarchive: src={{ playbook_dir }}/../../{{ java_package_name }}  dest={{ jdk_install_dir }}/
+  unarchive: src={{ playbook_dir }}/../../share/{{ java_package_name }}  dest={{ jdk_install_dir }}/
   when: bin_file_status.stat.exists == False
 
 ## 上面任务比较耗时，存在时则跳过
