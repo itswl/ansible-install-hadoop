@@ -5,15 +5,15 @@
 
 
 - name: Step 1 - Unarchive hive installation package
-  unarchive: src={{ playbook_dir }}/../../share/apache-hive-3.1.0-bin.tar.gz dest={{ hive_install_dir }}
+  unarchive: src={{ playbook_dir }}/../../share/{{ hive_package_name }} dest={{ hive_install_dir }}
 
 - name: Step 2 - Rename
   shell: |
-    rm -rf {{ hive_install_dir }}/hive-3.1.0
-    mv {{ hive_install_dir }}/apache-hive-3.1.0-bin {{ hive_install_dir }}/hive-3.1.0
+    rm -rf {{ hive_install_dir }}/{{ hive_new_dir_name }}
+    mv {{ hive_install_dir }}/{{ hive_dir_name }} {{ hive_install_dir }}/{{ hive_new_dir_name }}
 
 - name: Step 3 Create Links {{ hive_install_dir }}/current
-  file: src={{ hive_install_dir }}/hive-3.1.0 dest={{ hive_install_dir }}/current state=link
+  file: src={{ hive_install_dir }}/{{ hive_new_dir_name }} dest={{ hive_install_dir }}/current state=link
 
 - name: Step 3 - Modify hive conf
   template: src={{ item }}.j2 dest={{ hive_install_dir }}/current/conf/{{ item }} mode=0644
@@ -42,42 +42,16 @@
 #   when: result.failed == true
 
 
-- name: Step 7 cp {{ hive_install_dir }}/current/lib/postgresql-42.6.0.jar
-  copy: src=postgresql-42.6.0.jar dest={{ hive_install_dir }}/current/lib/postgresql-42.6.0.jar
-
-- name: Step 8 - Initialize hive metadata
+- name: Step 7 cp {{ hive_install_dir }}/current/lib/postgresql-42.7.3.jar
+  copy: src={{ playbook_dir }}/../../share/postgresql-42.7.3.jar dest={{ hive_install_dir }}/current/lib/postgresql-42.7.3.jar
+  
+- name: Step 7 - Initialize hive metadata
   shell: |
     mv {{ hive_install_dir }}/current/lib/postgresql-9.4.1208.jre7.jar {{ hive_install_dir }}/current/lib/postgresql-9.4.1208.jre7.bak
+    mv {{ hive_install_dir }}/current/lib/postgresql-42.6.0.jar {{ hive_install_dir }}/current/lib/postgresql-42.6.0.jar.bak
   ignore_errors: true
 
-- name: Step 8 - Initialize hive metadata
-  shell: |
-    {{ hive_install_dir }}/current/bin/schematool -dbType postgres -initSchema -verbose
 
-# - name: Step 9 - Copy net tools rpm file
-#   copy: src=net-tools-2.0-0.25.20131004git.el7.x86_64.rpm dest={{ tmp_dir }}/ansible_tmp/
-
-# - name: Step 10 - Install net tools
-#   yum: name={{ tmp_dir }}/ansible_tmp/net-tools-2.0-0.25.20131004git.el7.x86_64.rpm state=present
-
-- name: Step 11 - Copy hive start|stop script
-  template: src=hiveservice.sh dest={{ hive_install_dir }}/current mode=0755
-
-- name: mkdir 
-  shell: |
-    mkdir {{ hive_install_dir }}/current/logs
-    chown -R {{ user }}:{{ usergroup }} {{ hive_install_dir }}/current/logs
- 
-- name: Step 8 - cp hive_auto_restart.sh
-  template: src=hive_auto_restart.sh.j2 dest={{ hive_install_dir }}/current/hive_auto_restart.sh mode=0755
-
-- name: hiveAutoStart
-  cron:
-    name: hiveAutoStart
-    special_time: reboot
-    user: "{{ user }}"
-    job: "{{ hive_install_dir }}/current/hive_auto_restart.sh"
-    
  # 防止多次运行重复写入文件
 - name: Delete /etc/profile.d/ansible_hive.sh
   file: 
@@ -95,6 +69,34 @@
   shell: /bin/echo export {{ item }} >> /etc/profile.d/ansible_hive.sh   
   with_items:
       - PATH={{ hive_install_dir }}/current/bin:\$PATH
+      
+- name: Step 8 - cp hive_auto_restart.sh
+  template: src=hive_auto_restart.sh.j2 dest={{ hive_install_dir }}/current/hive_auto_restart.sh mode=0755
+
+- name: hiveAutoStart
+  cron:
+    name: hiveAutoStart
+    special_time: reboot
+    user: "{{ user }}"
+    job: "{{ hive_install_dir }}/current/hive_auto_restart.sh"
+
+- name: Step 11 - Copy hive start|stop script
+  template: src=hiveservice.sh dest={{ hive_install_dir }}/current mode=0755
+
+- name: mkdir {{ hive_install_dir }}/current/logs
+  shell: |
+    mkdir {{ hive_install_dir }}/current/logs
+    chown -R {{ user }}:{{ usergroup }} {{ hive_install_dir }}/current/logs
+
+- name: Step 8 - Initialize hive metadata
+  shell: |
+    {{ hive_install_dir }}/current/bin/schematool -dbType postgres -initSchema -verbose
+
+# - name: Step 9 - Copy net tools rpm file
+#   copy: src=net-tools-2.0-0.25.20131004git.el7.x86_64.rpm dest={{ tmp_dir }}/ansible_tmp/
+
+# - name: Step 10 - Install net tools
+#   yum: name={{ tmp_dir }}/ansible_tmp/net-tools-2.0-0.25.20131004git.el7.x86_64.rpm state=present
 
 - name: Step 12 - Start hive metastore and hiveserver2
   become: true

@@ -6,16 +6,18 @@ send "123456\r"
 expect "Re-enter new password: "
 send "123456\r"
 expect "	(RETURN if same as keystore password):  "
-send "\r"
-expect eof
-
-
-spawn keytool -keystore truststore -alias CARoot -import -file bd_ca_cert
-expect "Enter keystore password:
 send "123456\r"
 expect "Re-enter new password: "
 send "123456\r"
-expect "Trust this certificate? [no]:  "
+expect eof
+
+set timeout 120
+spawn keytool -keystore truststore -alias CARoot -import -file bd_ca_cert
+expect "Enter keystore password: "
+send "123456\r"
+expect "Re-enter new password: "
+send "123456\r"
+expect "Trust this certificate? \[no\]:  "
 send "yes\r"
 expect eof
 
@@ -33,7 +35,7 @@ expect eof
 spawn keytool -keystore keystore -alias CARoot -import -file bd_ca_cert
 expect "Enter keystore password:  "
 send "123456\r"
-expect "Trust this certificate? [no]:  "
+expect "Trust this certificate? \[no\]:  "
 send "yes\r"
 expect eof
 

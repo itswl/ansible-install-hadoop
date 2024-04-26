@@ -1,5 +1,5 @@
 - import_tasks: https.yml
   when: 
-   - "kerberos_auth == true"
+   - "{{ kerberos_auth }} == true"
 
 - import_tasks: hadoop.yml

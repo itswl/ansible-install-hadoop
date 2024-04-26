@@ -37,3 +37,4 @@ clientPort=2181
 {% for host in groups['zookeeper'] %}
 server.{{ hostvars[host].myid }}={{ host }}:2888:3888
 {% endfor %}
+admin.serverPort=8081

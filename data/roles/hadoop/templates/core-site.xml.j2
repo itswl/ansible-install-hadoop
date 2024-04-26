@@ -18,6 +18,16 @@
 
 <configuration>
     <property>
+      <name>fs.trash.interval</name>
+      <value>1440</value>
+    </property>
+    
+    <property>
+      <name>fs.trash.checkpoint.interval</name>
+      <value>0</value>
+    </property>
+    
+    <property>
         <name>fs.defaultFS</name>
         <value>hdfs://zetyun-hdfs</value>
     </property>
@@ -45,6 +55,16 @@
     </property>
     
     <property>
+        <name>hadoop.proxyuser.hive.hosts</name>
+        <value>*</value>
+    </property>
+
+    <property>
+        <name>hadoop.proxyuser.hive.groups</name>
+        <value>*</value>
+    </property>    
+    
+    <property>
         <name>hadoop.security.authentication</name>
         <value>{{ 'kerberos' if kerberos_auth else 'simple' }}</value>
     </property>
@@ -54,7 +74,7 @@
         <value>{{ 'true' if kerberos_auth else 'false' }}</value>
     </property>
 
-{% if kerberos_auth == true %}
+{% if kerberos_auth %}
     <property>
         <name>hadoop.security.auth_to_local</name>
         <value>

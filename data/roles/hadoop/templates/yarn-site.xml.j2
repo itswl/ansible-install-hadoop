@@ -97,6 +97,32 @@
         <value>org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore</value>
     </property>
 
+{% for host in rm_server %}
+    <property>
+        <name>yarn.resourcemanager.webapp.https.address.rm{{ loop.index }}</name>
+        <value>{{ host }}:8090</value>
+    </property>
+{% if not loop.last %}
+
+{% endif %}
+{% endfor %}
+
+
+    <property>
+        <name>yarn.nodemanager.container-executor.class</name>
+        <value>org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor</value>
+    </property>
+
+    <property>
+        <name>yarn.nodemanager.linux-container-executor.group</name>
+        <value>{{ hadoop_super_user }}</value>
+    </property>
+
+    <!--property>
+    	<name>yarn.nodemanager.linux-container-executor.path</name>
+    	<value>${hadoop.tmp.dir}/yarn/container-executor</value>
+    </property-->
+
 {% if kerberos_auth %}
     <property>
     	<name>yarn.resourcemanager.principal</name>
@@ -124,30 +150,4 @@
     </property>
 
 {% endif %}
-
-{% for host in rm_server %}
-    <property>
-        <name>yarn.resourcemanager.webapp.https.address.rm{{ loop.index }}</name>
-        <value>{{ host }}:8090</value>
-    </property>
-{% if not loop.last %}
-
-{% endif %}
-{% endfor %}
-
-
-    <property>
-        <name>yarn.nodemanager.container-executor.class</name>
-        <value>org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor</value>
-    </property>
-
-    <property>
-        <name>yarn.nodemanager.linux-container-executor.group</name>
-        <value>{{ hadoop_super_user }}</value>
-    </property>
-
-    <!--property>
-    	<name>yarn.nodemanager.linux-container-executor.path</name>
-    	<value>${hadoop.tmp.dir}/yarn/container-executor</value>
-    </property-->
 </configuration>

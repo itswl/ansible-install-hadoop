@@ -1,59 +1,77 @@
 #所有节点都需安装
 [jdk]
-imwl-01
-imwl-02
-imwl-03
+bap-01
+bap-02
+bap-03
 
 #须配置为单数节点
 [zookeeper]
-imwl-01 myid=1
-imwl-02 myid=2
-imwl-03 myid=3
+bap-01 myid=1
+bap-02 myid=2
+bap-03 myid=3
 
 #所有目录配置项均不能位于根目录，且目录结尾不加/，下同
 [zookeeper:vars]
 zk_install_dir=/opt/bigdata/zookeeper
+zk_package_name=apache-zookeeper-3.7.0-bin.tar.gz
+zk_dir_name=apache-zookeeper-3.7.0-bin
+zk_new_dir_name=zookeeper-3.7.0
 
 [hadoop]
-imwl-01
-imwl-02
-imwl-03
+bap-01
+bap-02
+bap-03
 
 [hadoop:vars]
-nn_server=["imwl-01", "imwl-02"]
-rm_server=["imwl-01", "imwl-03"]
+hadoop_package_name=hadoop-3.2.2.tar.gz
+hadoop_dir_name=hadoop-3.2.2
+nn_server=["bap-01", "bap-02"]
+rm_server=["bap-01", "bap-03"]
 hadoop_super_user=bap
 #hadoop数据路径，需保证磁盘容量充足
-hadoop_data_dir=/mnt/hadoop/metadata
+hadoop_data_dir=/var/lib/hadoop/metadata
 #hdfs数据路径，建议以磁盘的形式进行挂载，数据存放在各个路径下的hdfs/data路径
-hadoop_datanode_data_dir=["/mnt/hadoop/data1", "/mnt/hadoop/data2"]
-hadoop_datanode_data_dir1="/mnt/hadoop/data1"
-hadoop_datanode_data_dir2="/mnt/hadoop/data2"
+hadoop_datanode_data_dir=["/var/lib/hadoop/data1", "/var/lib/hadoop/data2"]
+hadoop_datanode_data_dir1="/var/lib/hadoop/data1"
+hadoop_datanode_data_dir2="/var/lib/hadoop/data2"
+
 
 [hive]
-imwl-02
+bap-02
 
 [hive:vars]
+hive_package_name=apache-hive-3.1.0-bin.tar.gz
+hive_dir_name=apache-hive-3.1.0-bin
+hive_new_dir_name=hive-3.1.0
 hive_install_dir=/opt/bigdata/hive
 hiveserver2_proxy_user=bap
+##pg数据库信息
 pg_server=bap-ha.postgres-operator.svc.cluster.local
 pg_port=5432
-pg_user=postgres
+pg_user=hive
 pg_password=Zetyun_2021!
 
 
 #所有节点都需安装，server必须配置在第一行，其余节点配置成client
 [kerberos]
-imwl-03 role=server
-imwl-01 role=client
-imwl-02 role=client
+bap-03 role=server
+bap-01 role=client
+bap-02 role=client
 
 
 [all:vars]
+##运行hadoop相关程序的用户
 user=bap
 usergroup=bap
+##hadoop安装目录
 hadoop_install_dir=/opt/bigdata/hadoop
 tmp_dir=/tmp
+##配置hadoop.security.authentication参数,是否开启kerberos：
+##True/False
+## ARM 环境暂时不要设置为 True
 kerberos_auth=False
+##java安装路径
 jdk_install_dir=/opt/bigdata/java
+java_package_name=jdk-8u321-linux-x64.tar.gz
+java_dir_name=jdk1.8.0_321
 

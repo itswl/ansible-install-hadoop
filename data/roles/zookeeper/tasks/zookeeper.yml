@@ -21,15 +21,15 @@
     state: directory
 
 - name: Step 1 - Unarchive zookeeper installation package
-  unarchive: src={{ playbook_dir }}/../../share/apache-zookeeper-3.7.0-bin.tar.gz dest={{ zk_install_dir }}
+  unarchive: src={{ playbook_dir }}/../../share/{{ zk_package_name }} dest={{ zk_install_dir }}
 
 - name: Step 2 - Rename
   shell: |
-    rm -rf {{ zk_install_dir }}/zookeeper-3.7.0
-    mv {{ zk_install_dir }}/apache-zookeeper-3.7.0-bin {{ zk_install_dir }}/zookeeper-3.7.0
+    rm -rf {{ zk_install_dir }}/{{ zk_new_dir_name }}
+    mv {{ zk_install_dir }}/{{ zk_dir_name }} {{ zk_install_dir }}/{{ zk_new_dir_name }}
 
-- name: Step 3 Create Links {{ zk_install_dir }}/elasticsearch/current
-  file: src={{ zk_install_dir }}/zookeeper-3.7.0 dest={{ zk_install_dir }}/current state=link
+- name: Step 3 Create Links {{ zk_install_dir }}/current
+  file: src={{ zk_install_dir }}/{{ zk_new_dir_name }} dest={{ zk_install_dir }}/current state=link
 
 - name: Step 3 - Make zookeeper data dir
   file: dest={{ zk_install_dir }}/current/data mode=0755 state=directory
@@ -42,6 +42,17 @@
 
 - name: 更改用户权限 chown {{ user }}:{{ usergroup }} -R {{ zk_install_dir }}
   shell: "chown {{ user }}:{{ usergroup }} -R {{ zk_install_dir }}"
+  
+
+- name: Step 5 - cp zookeeper_auto_restart.sh
+  template: src=zookeeper_auto_restart.sh.j2 dest={{ zk_install_dir }}/current/zookeeper_auto_restart.sh mode=0755
+
+- name: zookeeperAutoStart
+  cron:
+    name: zookeeperAutoStart
+    special_time: reboot
+    user: "{{ user }}"
+    job: "{{ zk_install_dir }}/current/zookeeper_auto_restart.sh"
 
 - name: Step 6 - Start zookeeper service {{ zk_install_dir }}/current/bin/zkServer.sh start
   become: true
@@ -70,13 +81,3 @@
 
 - debug: var="file_status.stdout"
 
-
-- name: Step 8 - cp zookeeper_auto_restart.sh
-  template: src=zookeeper_auto_restart.sh.j2 dest={{ zk_install_dir }}/current/zookeeper_auto_restart.sh mode=0755
-
-- name: zookeeperAutoStart
-  cron:
-    name: zookeeperAutoStart
-    special_time: reboot
-    user: "{{ user }}"
-    job: "{{ zk_install_dir }}/current/zookeeper_auto_restart.sh"
