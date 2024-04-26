@@ -1,4 +1,5 @@
 ### 注意事项
+0. share 文件夹中为安装包文件名称，需要去官方下载。对应 conf/hots 里 package_name.测试 arm 替换 hadoop 和 java 即可 
 
 1. 关闭防火墙和Selinux
 
